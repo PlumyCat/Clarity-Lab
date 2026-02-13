@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+*.js.map
+
+# Environment files with secrets
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test output
+coverage/
+
+# PPTX test files
+*.pptx
+
+# Logs
+*.log

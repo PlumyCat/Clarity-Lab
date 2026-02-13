@@ -1,0 +1,64 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.2",
+  "id": "${{MICROSOFT_APP_ID}}",
+  "developer": {
+    "name": "Clarity Lab",
+    "websiteUrl": "https://github.com/PlumyCat/Clarity-Lab",
+    "privacyUrl": "https://github.com/PlumyCat/Clarity-Lab",
+    "termsOfUseUrl": "https://github.com/PlumyCat/Clarity-Lab"
+  },
+  "name": {
+    "short": "StormMate",
+    "full": "StormMate - AI Brainstorming Facilitator"
+  },
+  "description": {
+    "short": "AI-powered structured brainstorming with proven techniques",
+    "full": "StormMate guides your brainstorming meetings through an 8-step structured methodology. It asks the right questions, facilitates exchanges with proven techniques (5 Whys, SWOT, Six Thinking Hats, SCAMPER, etc.) and automatically generates a PowerPoint summary ready for client validation."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#1B365D",
+  "bots": [
+    {
+      "botId": "${{MICROSOFT_APP_ID}}",
+      "scopes": ["personal", "groupchat", "team"],
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": ["personal", "groupchat", "team"],
+          "commands": [
+            {
+              "title": "start",
+              "description": "Start a new brainstorming session"
+            },
+            {
+              "title": "resume",
+              "description": "Resume an existing session"
+            },
+            {
+              "title": "status",
+              "description": "Show session progress (step X/8)"
+            },
+            {
+              "title": "next",
+              "description": "Show current step card"
+            },
+            {
+              "title": "export",
+              "description": "Generate the PowerPoint summary"
+            },
+            {
+              "title": "help",
+              "description": "Help and available commands"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "validDomains": ["${{BOT_DOMAIN}}"]
+}
