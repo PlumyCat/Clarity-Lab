@@ -124,6 +124,9 @@ export class BrainstormBot extends TeamsActivityHandler {
       MessageFactory.attachment(buildCard(buildWelcomeCard())),
     );
     await context.sendActivity(
+      "💡 **Astuce** : Pensez à activer le transcript Teams si vous souhaitez utiliser le mode **Discussion libre** pendant les techniques de brainstorming.",
+    );
+    await context.sendActivity(
       MessageFactory.attachment(buildCard(buildObjectiveFormCard(created))),
     );
   }

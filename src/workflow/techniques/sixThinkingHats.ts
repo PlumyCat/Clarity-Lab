@@ -1,4 +1,4 @@
-import type { TechniqueId, BrainstormSession, TechniqueRound, UserInput } from '../../storage/types';
+import type { TechniqueId, BrainstormSession, TechniqueRound, UserInput, ParticipantResponse } from '../../storage/types';
 import type { BaseTechnique, BrainstormTechnique } from './index';
 import { wrapWithProgress } from '../../cards/builder';
 
@@ -159,6 +159,11 @@ export class SixThinkingHatsTechnique implements BrainstormTechnique {
           data: { action: 'technique_round_submit', round, techniqueId: this.id },
           style: 'positive',
         },
+        {
+          type: 'Action.Submit',
+          title: 'Discussion libre (transcript)',
+          data: { action: 'transcript_mode', round, techniqueId: this.id },
+        },
       ],
     };
   }
@@ -169,20 +174,26 @@ export class SixThinkingHatsTechnique implements BrainstormTechnique {
     _session: BrainstormSession,
   ): Promise<{ roundResult: TechniqueRound; isComplete: boolean }> {
     const hat = HATS[round];
-    const content = input.text || (input.data?.['response'] as string) || '';
+
+    // Support transcript mode : responses multiples depuis le transcript
+    const transcriptResponses = input.data?.['transcriptResponses'] as ParticipantResponse[] | undefined;
+
+    const responses: ParticipantResponse[] = transcriptResponses && transcriptResponses.length > 0
+      ? transcriptResponses
+      : [
+          {
+            participantId: input.participantId,
+            participantName: input.participantName,
+            content: input.text || (input.data?.['response'] as string) || '',
+            timestamp: new Date(),
+          },
+        ];
 
     const roundResult: TechniqueRound = {
       roundNumber: round,
       prompt: hat ? `${hat.icon} ${hat.label} — ${hat.question}` : `Chapeau ${round + 1}`,
-      responses: [
-        {
-          participantId: input.participantId,
-          participantName: input.participantName,
-          content,
-          timestamp: new Date(),
-        },
-      ],
-      summary: '', // Sera rempli par le workflow engine via Claude
+      responses,
+      summary: '',
     };
 
     return {

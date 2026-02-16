@@ -1,6 +1,7 @@
 import {
   BmadStep,
   BrainstormSession,
+  ParticipantResponse,
   StepResult,
   TechniqueId,
   TechniqueResult,
@@ -70,11 +71,23 @@ export class ExecuteTechniqueHandler implements StepHandler {
     let roundResult: TechniqueRound;
     let isComplete: boolean;
 
+    // Check for transcript responses (multi-participant from transcript mode)
+    const transcriptResponses = input.data?.transcriptResponses as ParticipantResponse[] | undefined;
+
     const fullTech = getBrainstormTechnique(techniqueId);
     if (fullTech) {
       const result = await fullTech.processRoundInput(currentRound, input, session);
       roundResult = result.roundResult;
       isComplete = result.isComplete;
+    } else if (transcriptResponses && transcriptResponses.length > 0) {
+      // Transcript mode for legacy BaseTechnique
+      roundResult = {
+        roundNumber: currentRound,
+        prompt: baseTech.getRoundLabel(currentRound),
+        responses: transcriptResponses,
+        summary: '',
+      };
+      isComplete = currentRound >= baseTech.totalRounds - 1;
     } else {
       // Manual processing for legacy BaseTechnique
       const content = input.text || (input.data?.response as string) || (input.data?.contribution as string) || '';
@@ -242,6 +255,11 @@ export class ExecuteTechniqueHandler implements StepHandler {
           title: round === baseTech.totalRounds - 1 ? 'Terminer cette technique' : 'Soumettre',
           data: { action: 'technique_round_submit', round, techniqueId },
           style: 'positive',
+        },
+        {
+          type: 'Action.Submit',
+          title: 'Discussion libre (transcript)',
+          data: { action: 'transcript_mode', round, techniqueId },
         },
       ],
     };

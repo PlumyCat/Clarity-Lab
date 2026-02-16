@@ -13,6 +13,9 @@ import { buildObjectiveConfirmCard } from '../cards/templates/objectiveConfirm';
 import { buildProgressCard } from '../cards/templates/progressCard';
 import { createTechniqueSelectorCard } from '../cards/templates/techniqueSelector';
 import { WorkflowEngine } from '../workflow/engine';
+import { buildTranscriptInputCard } from '../cards/templates/transcriptInput';
+import { parseTranscript, transcriptToResponses } from '../transcript/parser';
+import { getTechnique, getBrainstormTechnique } from '../workflow/techniques/index';
 
 const VALID_TECHNIQUE_IDS: TechniqueId[] = [
   'five_whys', 'starbursting', 'six_thinking_hats', 'scamper',
@@ -54,6 +57,12 @@ export class CardActionHandler {
       case 'submit_contribution':
       case 'technique_round_submit':
         return this.handleSubmitContributionFromCard(context, data);
+      case 'transcript_mode':
+        return this.handleTranscriptMode(context, data);
+      case 'submit_transcript':
+        return this.handleSubmitTranscript(context, data);
+      case 'cancel_transcript_mode':
+        return this.handleCancelTranscriptMode(context, data);
       case 'resume_session':
         return this.handleResumeSession(context);
       case 'continue_session':
@@ -294,6 +303,75 @@ export class CardActionHandler {
     }
 
     await this.handleContribution(context, session, text);
+  }
+
+  // --- Transcript Mode ---
+
+  private async handleTranscriptMode(
+    context: TurnContext,
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const session = await this.getSession(context);
+    if (!session) return;
+
+    const techniqueId = (data.techniqueId as string) || '';
+    const round = (data.round as number) ?? 0;
+
+    const baseTech = getTechnique(techniqueId as TechniqueId);
+    const roundLabel = baseTech.getRoundLabel(round);
+
+    await context.sendActivity(
+      MessageFactory.attachment(
+        buildCard(
+          buildTranscriptInputCard(session, techniqueId, baseTech.name, round, roundLabel),
+        ),
+      ),
+    );
+  }
+
+  private async handleSubmitTranscript(
+    context: TurnContext,
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const session = await this.getSession(context);
+    if (!session) return;
+
+    const rawTranscript = ((data.transcript as string) || '').trim();
+    if (!rawTranscript) {
+      await context.sendActivity("Veuillez coller le transcript avant de soumettre.");
+      return;
+    }
+
+    const entries = parseTranscript(rawTranscript);
+    const responses = transcriptToResponses(entries);
+
+    if (responses.length === 0) {
+      await context.sendActivity("Impossible d'extraire des contributions du transcript. Veuillez vérifier le format.");
+      return;
+    }
+
+    const participantNames = [...new Set(responses.map(r => r.participantName))];
+    await context.sendActivity(
+      `📝 Transcript analysé : **${responses.length}** contribution(s) de **${participantNames.join(', ')}**`,
+    );
+
+    // Delegate to workflow engine with transcriptResponses in data
+    await this.handleViaWorkflowEngine(context, 'technique_round_submit', {
+      ...data,
+      action: 'technique_round_submit',
+      transcriptResponses: responses,
+    });
+  }
+
+  private async handleCancelTranscriptMode(
+    context: TurnContext,
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const session = await this.getSession(context);
+    if (!session) return;
+
+    // Re-afficher la card standard du round
+    await this.sendStepEntryCard(context, session);
   }
 
   // --- Session Control ---
