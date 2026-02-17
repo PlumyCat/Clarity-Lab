@@ -55,8 +55,9 @@ export class CardActionHandler {
       case 'select_techniques':
         return this.handleSelectTechniques(context, data);
       case 'submit_contribution':
-      case 'technique_round_submit':
         return this.handleSubmitContributionFromCard(context, data);
+      case 'technique_round_submit':
+        return this.handleViaWorkflowEngine(context, action, data);
       case 'transcript_mode':
         return this.handleTranscriptMode(context, data);
       case 'submit_transcript':
