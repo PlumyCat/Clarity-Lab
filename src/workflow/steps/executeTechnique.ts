@@ -111,7 +111,11 @@ export class ExecuteTechniqueHandler implements StepHandler {
     const contributions = roundResult.responses.map(r => r.content).filter(Boolean);
     if (contributions.length > 0) {
       try {
-        roundResult.summary = await this.claudeClient.synthesizeContributions(contributions);
+        roundResult.summary = await this.claudeClient.synthesizeContributions(contributions, {
+          objective: session.objective?.refinedStatement,
+          techniqueName: baseTech.name,
+          roundLabel: baseTech.getRoundLabel(currentRound),
+        });
       } catch (error) {
         console.log(`[ExecuteTechniqueHandler] Failed to synthesize round: ${error instanceof Error ? error.message : String(error)}`);
         roundResult.summary = contributions.join('\n');
@@ -136,7 +140,11 @@ export class ExecuteTechniqueHandler implements StepHandler {
       ).filter(Boolean);
 
       try {
-        techniqueResult.summary = await this.claudeClient.synthesizeContributions(allContributions);
+        techniqueResult.summary = await this.claudeClient.synthesizeContributions(allContributions, {
+          objective: session.objective?.refinedStatement,
+          techniqueName: baseTech.name,
+          roundLabel: 'Synthèse globale de la technique',
+        });
       } catch {
         techniqueResult.summary = `Technique ${baseTech.name} terminée.`;
       }
@@ -238,13 +246,6 @@ export class ExecuteTechniqueHandler implements StepHandler {
         wrap: true,
         spacing: 'Medium',
       },
-      {
-        type: 'Input.Text',
-        id: 'response',
-        placeholder: 'Partagez vos réflexions...',
-        isMultiline: true,
-        isRequired: true,
-      },
     ]);
 
     return {
@@ -252,14 +253,9 @@ export class ExecuteTechniqueHandler implements StepHandler {
       actions: [
         {
           type: 'Action.Submit',
-          title: round === baseTech.totalRounds - 1 ? 'Terminer cette technique' : 'Soumettre',
-          data: { action: 'technique_round_submit', round, techniqueId },
+          title: 'Commencer le tour',
+          data: { action: 'start_discussion', round, techniqueId },
           style: 'positive',
-        },
-        {
-          type: 'Action.Submit',
-          title: 'Discussion libre (transcript)',
-          data: { action: 'transcript_mode', round, techniqueId },
         },
       ],
     };

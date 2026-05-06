@@ -1,5 +1,5 @@
 import PptxGenJS from 'pptxgenjs';
-import { BMAD_THEME, hex, addSlideHeader, addFooter } from '../theme';
+import { BMAD_THEME, hex, addSlideHeader, addFooter, stripMarkdown, truncateText } from '../theme';
 import { Insight } from '../../storage/types';
 
 export function addNextStepsSlide(
@@ -35,7 +35,7 @@ export function addNextStepsSlide(
 
   if (topInsights.length > 0) {
     const actionTexts: PptxGenJS.TextProps[] = topInsights.map((insight) => ({
-      text: `${insight.title} (Impact: ${insight.impact}, Effort: ${insight.effort})`,
+      text: `${truncateText(stripMarkdown(insight.title), 80)} (Impact: ${insight.impact}, Effort: ${insight.effort})`,
       options: {
         fontSize: BMAD_THEME.sizes.body,
         bullet: true,
@@ -50,6 +50,7 @@ export function addNextStepsSlide(
       fontFace: BMAD_THEME.fonts.body,
       color: hex(BMAD_THEME.colors.text),
       valign: 'top',
+      autoFit: true,
     });
   } else {
     slide.addText('Aucune action recommandée.', {
@@ -80,7 +81,7 @@ export function addNextStepsSlide(
     const questionTexts: PptxGenJS.TextProps[] = data.openQuestions
       .slice(0, 4)
       .map((q) => ({
-        text: q,
+        text: truncateText(stripMarkdown(q), 120),
         options: {
           fontSize: BMAD_THEME.sizes.body,
           bullet: true,
@@ -95,6 +96,7 @@ export function addNextStepsSlide(
       fontFace: BMAD_THEME.fonts.body,
       color: hex(BMAD_THEME.colors.text),
       valign: 'top',
+      autoFit: true,
     });
   } else {
     slide.addText('Aucune question ouverte.', {

@@ -138,14 +138,6 @@ export class SixThinkingHatsTechnique implements BrainstormTechnique {
         wrap: true,
         spacing: 'Medium',
       },
-      // Champ de saisie
-      {
-        type: 'Input.Text',
-        id: 'response',
-        placeholder: `Partagez vos réflexions pour le ${hat.label}...`,
-        isMultiline: true,
-        isRequired: true,
-      },
     ];
 
     const card = wrapWithProgress(session, body);
@@ -155,14 +147,9 @@ export class SixThinkingHatsTechnique implements BrainstormTechnique {
       actions: [
         {
           type: 'Action.Submit',
-          title: `Soumettre ce chapeau`,
-          data: { action: 'technique_round_submit', round, techniqueId: this.id },
+          title: 'Commencer le tour',
+          data: { action: 'start_discussion', round, techniqueId: this.id },
           style: 'positive',
-        },
-        {
-          type: 'Action.Submit',
-          title: 'Discussion libre (transcript)',
-          data: { action: 'transcript_mode', round, techniqueId: this.id },
         },
       ],
     };

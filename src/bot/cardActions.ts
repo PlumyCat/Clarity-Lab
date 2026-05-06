@@ -13,8 +13,7 @@ import { buildObjectiveConfirmCard } from '../cards/templates/objectiveConfirm';
 import { buildProgressCard } from '../cards/templates/progressCard';
 import { createTechniqueSelectorCard } from '../cards/templates/techniqueSelector';
 import { WorkflowEngine } from '../workflow/engine';
-import { buildTranscriptInputCard } from '../cards/templates/transcriptInput';
-import { parseTranscript, transcriptToResponses } from '../transcript/parser';
+import { buildFreeDiscussionActiveCard } from '../cards/templates/transcriptInput';
 import { getTechnique, getBrainstormTechnique } from '../workflow/techniques/index';
 
 const VALID_TECHNIQUE_IDS: TechniqueId[] = [
@@ -58,12 +57,12 @@ export class CardActionHandler {
         return this.handleSubmitContributionFromCard(context, data);
       case 'technique_round_submit':
         return this.handleViaWorkflowEngine(context, action, data);
-      case 'transcript_mode':
-        return this.handleTranscriptMode(context, data);
-      case 'submit_transcript':
-        return this.handleSubmitTranscript(context, data);
-      case 'cancel_transcript_mode':
-        return this.handleCancelTranscriptMode(context, data);
+      case 'start_discussion':
+        return this.handleStartDiscussion(context, data);
+      case 'end_discussion':
+        return this.handleEndDiscussion(context, data);
+      case 'cancel_discussion':
+        return this.handleCancelDiscussion(context, data);
       case 'resume_session':
         return this.handleResumeSession(context);
       case 'continue_session':
@@ -225,14 +224,8 @@ export class CardActionHandler {
       `Techniques sélectionnées ! Commençons avec la première technique.`,
     );
 
-    // Generate prompt for first technique round
-    const prompt = await this.claude.generateTechniquePrompt(
-      firstTechnique,
-      0,
-      session.objective?.refinedStatement || '',
-    );
-
-    await context.sendActivity(prompt);
+    // Show the entry card for the first technique round (with buttons)
+    await this.sendStepEntryCard(context, session);
   }
 
   // --- Technique Contributions ---
@@ -283,7 +276,10 @@ export class CardActionHandler {
 
     // Synthesize contributions for this round
     const contributions = currentRound.responses.map((r) => r.content);
-    const synthesis = await this.claude.synthesizeContributions(contributions);
+    const synthesis = await this.claude.synthesizeContributions(contributions, {
+      objective: session.objective?.refinedStatement,
+      techniqueName: techniqueId,
+    });
     currentRound.summary = synthesis;
 
     await this.sessionStore.updateSession(session);
@@ -306,9 +302,9 @@ export class CardActionHandler {
     await this.handleContribution(context, session, text);
   }
 
-  // --- Transcript Mode ---
+  // --- Free Discussion Mode ---
 
-  private async handleTranscriptMode(
+  private async handleStartDiscussion(
     context: TurnContext,
     data: Record<string, unknown>,
   ): Promise<void> {
@@ -321,57 +317,68 @@ export class CardActionHandler {
     const baseTech = getTechnique(techniqueId as TechniqueId);
     const roundLabel = baseTech.getRoundLabel(round);
 
+    session.freeDiscussion = {
+      techniqueId,
+      round,
+      responses: [],
+      startedAt: new Date(),
+    };
+    await this.sessionStore.updateSession(session);
+
     await context.sendActivity(
       MessageFactory.attachment(
         buildCard(
-          buildTranscriptInputCard(session, techniqueId, baseTech.name, round, roundLabel),
+          buildFreeDiscussionActiveCard(session, techniqueId, baseTech.name, round, roundLabel),
         ),
       ),
     );
   }
 
-  private async handleSubmitTranscript(
+  private async handleEndDiscussion(
     context: TurnContext,
     data: Record<string, unknown>,
   ): Promise<void> {
     const session = await this.getSession(context);
     if (!session) return;
 
-    const rawTranscript = ((data.transcript as string) || '').trim();
-    if (!rawTranscript) {
-      await context.sendActivity("Veuillez coller le transcript avant de soumettre.");
+    if (!session.freeDiscussion || session.freeDiscussion.responses.length === 0) {
+      await context.sendActivity("Aucune contribution reçue. Envoyez des idées dans le chat avant de terminer.");
       return;
     }
 
-    const entries = parseTranscript(rawTranscript);
-    const responses = transcriptToResponses(entries);
+    const responses = [...session.freeDiscussion.responses];
+    const techniqueId = session.freeDiscussion.techniqueId;
+    const round = session.freeDiscussion.round;
 
-    if (responses.length === 0) {
-      await context.sendActivity("Impossible d'extraire des contributions du transcript. Veuillez vérifier le format.");
-      return;
-    }
+    // Clear free discussion
+    session.freeDiscussion = null;
+    await this.sessionStore.updateSession(session);
 
     const participantNames = [...new Set(responses.map(r => r.participantName))];
     await context.sendActivity(
-      `📝 Transcript analysé : **${responses.length}** contribution(s) de **${participantNames.join(', ')}**`,
+      `📝 Discussion terminée : **${responses.length}** contribution(s) de **${participantNames.join(', ')}**`,
     );
 
-    // Delegate to workflow engine with transcriptResponses in data
+    // Delegate to workflow engine with transcriptResponses
     await this.handleViaWorkflowEngine(context, 'technique_round_submit', {
       ...data,
       action: 'technique_round_submit',
+      techniqueId,
+      round,
       transcriptResponses: responses,
     });
   }
 
-  private async handleCancelTranscriptMode(
+  private async handleCancelDiscussion(
     context: TurnContext,
     data: Record<string, unknown>,
   ): Promise<void> {
     const session = await this.getSession(context);
     if (!session) return;
 
-    // Re-afficher la card standard du round
+    session.freeDiscussion = null;
+    await this.sessionStore.updateSession(session);
+
     await this.sendStepEntryCard(context, session);
   }
 
@@ -457,31 +464,42 @@ export class CardActionHandler {
       data: { ...data, action },
     };
 
-    const result = await this.workflowEngine.processInput(session, input);
+    try {
+      const result = await this.workflowEngine.processInput(session, input);
 
-    // Persist updated session
-    if (result.updatedSession) {
-      await this.sessionStore.updateSession(result.updatedSession);
-    }
-
-    // Send response text
-    if (result.responseText) {
-      await context.sendActivity(result.responseText);
-    }
-
-    // Send response card
-    if (result.responseCard) {
-      await context.sendActivity(MessageFactory.attachment(buildCard(result.responseCard)));
-    }
-
-    // If transitioned, show entry card for the new step
-    if (result.transitionTo && result.updatedSession) {
-      const entry = await this.workflowEngine.getEntryAction(result.updatedSession);
-      if ('card' in entry) {
-        await context.sendActivity(MessageFactory.attachment(buildCard(entry.card)));
-      } else {
-        await context.sendActivity(entry.text);
+      // Persist updated session
+      if (result.updatedSession) {
+        await this.sessionStore.updateSession(result.updatedSession);
       }
+
+      // Send response text
+      if (result.responseText) {
+        await context.sendActivity(result.responseText);
+      }
+
+      // Send response card
+      if (result.responseCard) {
+        await context.sendActivity(MessageFactory.attachment(buildCard(result.responseCard)));
+      }
+
+      // If transitioned, show entry card for the new step
+      if (result.transitionTo && result.updatedSession) {
+        const entry = await this.workflowEngine.getEntryAction(result.updatedSession);
+        if ('card' in entry) {
+          await context.sendActivity(MessageFactory.attachment(buildCard(entry.card)));
+        } else {
+          await context.sendActivity(entry.text);
+        }
+      }
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[CardActionHandler] Error in workflow engine for action "${action}":`, errMsg);
+      // Silently ignore etag conflicts (likely Teams retry)
+      if (errMsg.includes('modified by another process') || errMsg.includes('PRECONDITION_FAILED')) {
+        console.log(`[CardActionHandler] Ignoring etag conflict (probable Teams retry)`);
+        return;
+      }
+      throw error;
     }
   }
 

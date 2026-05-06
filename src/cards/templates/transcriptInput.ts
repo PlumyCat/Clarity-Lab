@@ -2,15 +2,18 @@ import type { BrainstormSession } from '../../storage/types';
 import { wrapWithProgress } from '../builder';
 
 /**
- * Card avec un champ multiline pour coller le transcript Teams.
+ * Card affichée pendant une discussion libre active.
+ * Les participants envoient leurs idées directement dans le chat.
  */
-export function buildTranscriptInputCard(
+export function buildFreeDiscussionActiveCard(
   session: BrainstormSession,
   techniqueId: string,
   techniqueName: string,
   round: number,
   roundLabel: string,
 ): object {
+  const responseCount = session.freeDiscussion?.responses.length ?? 0;
+
   const body: object[] = [
     {
       type: 'TextBlock',
@@ -21,7 +24,7 @@ export function buildTranscriptInputCard(
     },
     {
       type: 'TextBlock',
-      text: `📝 Discussion libre — ${techniqueName}`,
+      text: `💬 Discussion libre — ${techniqueName}`,
       size: 'Large',
       weight: 'Bolder',
       color: 'Accent',
@@ -37,25 +40,32 @@ export function buildTranscriptInputCard(
     },
     {
       type: 'TextBlock',
-      text: 'Collez ci-dessous le transcript de la discussion Teams. Le bot extraira automatiquement les contributions de chaque participant.',
+      text: '🎙️ **Le tour est lancé !** Envoyez vos idées avec **@StormMate** suivi de votre message.',
       wrap: true,
       spacing: 'Medium',
     },
     {
       type: 'TextBlock',
-      text: 'Formats supportés :\n- **Transcript Teams** (Nom / Heure / Texte)\n- **Format simple** (Nom: Texte)\n- **Texte libre** (un seul bloc)',
+      text: 'Exemple : `@StormMate Je pense que nous devrions cibler les PME`',
       wrap: true,
       spacing: 'Small',
       isSubtle: true,
       size: 'Small',
     },
     {
-      type: 'Input.Text',
-      id: 'transcript',
-      placeholder: 'Collez le transcript ici...',
-      isMultiline: true,
-      isRequired: true,
-      maxLength: 50000,
+      type: 'TextBlock',
+      text: `📊 **${responseCount}** contribution(s) reçue(s)`,
+      wrap: true,
+      spacing: 'Medium',
+      weight: 'Bolder',
+    },
+    {
+      type: 'TextBlock',
+      text: '_Quand tout le monde a contribué, tapez **@StormMate next** ou cliquez ci-dessous._',
+      wrap: true,
+      spacing: 'Small',
+      isSubtle: true,
+      size: 'Small',
     },
   ];
 
@@ -66,14 +76,14 @@ export function buildTranscriptInputCard(
     actions: [
       {
         type: 'Action.Submit',
-        title: 'Soumettre le transcript',
-        data: { action: 'submit_transcript', round, techniqueId },
+        title: 'Terminer le tour',
+        data: { action: 'end_discussion', round, techniqueId },
         style: 'positive',
       },
       {
         type: 'Action.Submit',
-        title: 'Retour saisie classique',
-        data: { action: 'cancel_transcript_mode', round, techniqueId },
+        title: 'Annuler',
+        data: { action: 'cancel_discussion', round, techniqueId },
       },
     ],
   };

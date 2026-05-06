@@ -1,5 +1,5 @@
 import PptxGenJS from 'pptxgenjs';
-import { BMAD_THEME, hex, addSlideHeader, addFooter } from '../theme';
+import { BMAD_THEME, hex, addSlideHeader, addFooter, stripMarkdown, truncateText } from '../theme';
 import { IdeaCategory } from '../../storage/types';
 
 const MAX_IDEAS_PER_CATEGORY = 6;
@@ -61,7 +61,7 @@ export function addIdeasOverviewSlide(
     // Ideas list
     const ideasToShow = category.ideas.slice(0, MAX_IDEAS_PER_CATEGORY);
     const ideaTexts: PptxGenJS.TextProps[] = ideasToShow.map((idea) => ({
-      text: idea.content,
+      text: truncateText(stripMarkdown(idea.content), 100),
       options: {
         fontSize: BMAD_THEME.sizes.small,
         bullet: true,
@@ -78,6 +78,7 @@ export function addIdeasOverviewSlide(
         fontFace: BMAD_THEME.fonts.body,
         color: hex(BMAD_THEME.colors.text),
         valign: 'top',
+        autoFit: true,
       });
     }
 

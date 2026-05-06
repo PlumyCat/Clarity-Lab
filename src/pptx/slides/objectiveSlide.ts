@@ -1,5 +1,5 @@
 import PptxGenJS from 'pptxgenjs';
-import { BMAD_THEME, hex, addSlideHeader, addFooter } from '../theme';
+import { BMAD_THEME, hex, addSlideHeader, addFooter, stripMarkdown, truncateText } from '../theme';
 import { Objective } from '../../storage/types';
 
 export function addObjectiveSlide(
@@ -20,7 +20,7 @@ export function addObjectiveSlide(
     fill: { color: hex(BMAD_THEME.colors.lightGray) },
     rectRadius: 0.05,
   });
-  slide.addText(objective.refinedStatement, {
+  slide.addText(truncateText(stripMarkdown(objective.refinedStatement), 200), {
     x: 0.7,
     y: 1.25,
     w: 8.6,
@@ -31,6 +31,7 @@ export function addObjectiveSlide(
     bold: true,
     italic: true,
     valign: 'middle',
+    autoFit: true,
   });
 
   // Section: Ce que nous brainstormons
@@ -44,7 +45,7 @@ export function addObjectiveSlide(
     color: hex(BMAD_THEME.colors.secondary),
     bold: true,
   });
-  slide.addText(objective.what || '\u2014', {
+  slide.addText(truncateText(stripMarkdown(objective.what || '\u2014'), 200), {
     x: 0.5,
     y: 2.65,
     w: 9.0,
@@ -53,6 +54,7 @@ export function addObjectiveSlide(
     fontFace: BMAD_THEME.fonts.body,
     color: hex(BMAD_THEME.colors.text),
     valign: 'top',
+    autoFit: true,
   });
 
   // Section: Contexte
@@ -66,7 +68,7 @@ export function addObjectiveSlide(
     color: hex(BMAD_THEME.colors.secondary),
     bold: true,
   });
-  slide.addText(objective.context || '\u2014', {
+  slide.addText(truncateText(stripMarkdown(objective.context || '\u2014'), 200), {
     x: 0.5,
     y: 3.75,
     w: 9.0,
@@ -75,6 +77,7 @@ export function addObjectiveSlide(
     fontFace: BMAD_THEME.fonts.body,
     color: hex(BMAD_THEME.colors.text),
     valign: 'top',
+    autoFit: true,
   });
 
   // Section: Résultat attendu
@@ -88,7 +91,7 @@ export function addObjectiveSlide(
     color: hex(BMAD_THEME.colors.secondary),
     bold: true,
   });
-  slide.addText(objective.desiredOutcome || '\u2014', {
+  slide.addText(truncateText(stripMarkdown(objective.desiredOutcome || '\u2014'), 200), {
     x: 0.5,
     y: 4.85,
     w: 9.0,
@@ -97,6 +100,7 @@ export function addObjectiveSlide(
     fontFace: BMAD_THEME.fonts.body,
     color: hex(BMAD_THEME.colors.text),
     valign: 'top',
+    autoFit: true,
   });
 
   addFooter(slide, data.date);

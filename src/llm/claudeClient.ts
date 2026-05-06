@@ -114,16 +114,29 @@ Réponds UNIQUEMENT avec un tableau JSON valide au format suivant, sans texte av
     return this.chat(getSystemPrompt(), [{ role: 'user', content: guidePrompt }]);
   }
 
-  async synthesizeContributions(contributions: string[]): Promise<string> {
+  async synthesizeContributions(
+    contributions: string[],
+    context?: { objective?: string; techniqueName?: string; roundLabel?: string },
+  ): Promise<string> {
     const contributionsList = contributions
       .map((c, i) => `${i + 1}. ${c}`)
       .join('\n');
 
-    const prompt = `Voici les contributions des participants pour ce tour de brainstorming :
+    const contextBlock = context?.objective
+      ? `**Objectif du brainstorming :** ${context.objective}
+**Technique :** ${context.techniqueName ?? 'N/A'}
+**Tour :** ${context.roundLabel ?? 'N/A'}
+
+`
+      : '';
+
+    const prompt = `${contextBlock}Voici les contributions des participants pour ce tour de brainstorming :
 
 ${contributionsList}
 
-Fais une synthèse concise et structurée de ces contributions. Identifie les thèmes principaux, les points de convergence et les idées originales. La synthèse doit être encourageante et préparer le terrain pour le tour suivant.`;
+Fais une synthèse concise et structurée de ces contributions EN RESTANT STRICTEMENT dans le cadre de l'objectif et du tour ci-dessus. N'invente pas de contexte ni de sujet qui ne serait pas mentionné dans les contributions. Identifie les thèmes principaux, les points de convergence et les idées originales. La synthèse doit être encourageante et préparer le terrain pour le tour suivant.
+
+IMPORTANT : Réponds en texte brut SANS formatage markdown (pas de #, **, *, -, emojis, backticks). Utilise uniquement des phrases et paragraphes simples. Maximum 3-4 phrases.`;
 
     return this.chat(getSystemPrompt(), [{ role: 'user', content: prompt }]);
   }

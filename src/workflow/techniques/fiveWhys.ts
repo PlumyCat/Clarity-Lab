@@ -100,23 +100,12 @@ export class FiveWhysTechnique implements BrainstormTechnique {
 
     // Question du round
     const prompt = this.getPromptForRound(round, session);
-    body.push(
-      {
-        type: 'TextBlock',
-        text: prompt,
-        wrap: true,
-        spacing: 'Medium',
-      },
-      {
-        type: 'Input.Text',
-        id: 'response',
-        placeholder: round === 4
-          ? 'Identifiez la cause racine fondamentale...'
-          : 'Pourquoi ? Expliquez votre raisonnement...',
-        isMultiline: true,
-        isRequired: true,
-      },
-    );
+    body.push({
+      type: 'TextBlock',
+      text: prompt,
+      wrap: true,
+      spacing: 'Medium',
+    });
 
     // Note spéciale pour le dernier round
     if (round === 4) {
@@ -137,14 +126,9 @@ export class FiveWhysTechnique implements BrainstormTechnique {
       actions: [
         {
           type: 'Action.Submit',
-          title: round === 4 ? 'Identifier la cause racine' : 'Soumettre',
-          data: { action: 'technique_round_submit', round, techniqueId: this.id },
+          title: 'Commencer le tour',
+          data: { action: 'start_discussion', round, techniqueId: this.id },
           style: 'positive',
-        },
-        {
-          type: 'Action.Submit',
-          title: 'Discussion libre (transcript)',
-          data: { action: 'transcript_mode', round, techniqueId: this.id },
         },
       ],
     };

@@ -50,8 +50,55 @@ export class BrainstormBot extends TeamsActivityHandler {
     // Handle card Action.Submit (comes as message with activity.value, no text)
     const value = context.activity.value as Record<string, unknown> | undefined;
     if (value && typeof value.action === 'string') {
-      await this.cardActionHandler.handleAction(context, value.action, value);
+      try {
+        await this.cardActionHandler.handleAction(context, value.action, value);
+      } catch (error) {
+        console.error(`[BrainstormBot] Card action "${value.action}" error:`, error);
+        // Don't re-throw for completed sessions or etag conflicts
+        const msg = error instanceof Error ? error.message : String(error);
+        if (msg.includes('modified by another') || msg.includes('PRECONDITION_FAILED') || msg.includes('not found')) {
+          return;
+        }
+        throw error;
+      }
       return;
+    }
+
+    // --- Free discussion interception ---
+    const conversationId = context.activity.conversation.id;
+    const activeSession = await this.sessionStore.getSessionByConversationId(conversationId);
+
+    if (activeSession?.freeDiscussion) {
+      const rawText = this.extractCommand(context);
+      if (rawText) {
+        const lower = rawText.toLowerCase().trim();
+        // Bot commands pass through normally (not captured as contributions)
+        const BOT_COMMANDS = ['start', 'resume', 'status', 'export', 'pause', 'help'];
+        if (BOT_COMMANDS.includes(lower)) {
+          // Fall through to normal command handling below
+        } else if (['next', 'suivant', 'continuer', 'continue', 'terminé', 'termine', 'fin', 'stop'].includes(lower)) {
+          // End the round
+          await this.cardActionHandler.handleAction(context, 'end_discussion', {
+            action: 'end_discussion',
+            techniqueId: activeSession.freeDiscussion.techniqueId,
+            round: activeSession.freeDiscussion.round,
+          });
+          return;
+        } else {
+          // Capture as contribution
+          const participantName = context.activity.from.name || 'Inconnu';
+          activeSession.freeDiscussion.responses.push({
+            participantId: context.activity.from.id,
+            participantName,
+            content: rawText,
+            timestamp: new Date(),
+          });
+          await this.sessionStore.updateSession(activeSession);
+          const total = activeSession.freeDiscussion.responses.length;
+          await context.sendActivity(`✅ **${participantName}** — idée enregistrée (${total} au total)`);
+          return;
+        }
+      }
     }
 
     const text = this.extractCommand(context);
@@ -124,7 +171,7 @@ export class BrainstormBot extends TeamsActivityHandler {
       MessageFactory.attachment(buildCard(buildWelcomeCard())),
     );
     await context.sendActivity(
-      "💡 **Astuce** : Pensez à activer le transcript Teams si vous souhaitez utiliser le mode **Discussion libre** pendant les techniques de brainstorming.",
+      "💡 **Astuce** : Pendant les techniques, cliquez **Commencer le tour** puis envoyez vos idées avec **@StormMate**. Tapez **@StormMate next** pour clôturer le tour.",
     );
     await context.sendActivity(
       MessageFactory.attachment(buildCard(buildObjectiveFormCard(created))),
@@ -243,13 +290,15 @@ export class BrainstormBot extends TeamsActivityHandler {
       return;
     }
 
-    // During technique execution, treat free text as a contribution
+    // During technique execution, remind to start the round first
     if (
       session.currentStep === BmadStep.EXECUTE_TECHNIQUE_1 ||
       session.currentStep === BmadStep.EXECUTE_TECHNIQUE_2 ||
       session.currentStep === BmadStep.EXECUTE_TECHNIQUE_3
     ) {
-      await this.cardActionHandler.handleContribution(context, session, text);
+      await context.sendActivity(
+        "Cliquez sur **Commencer le tour** pour lancer la collecte d'idées, puis envoyez vos contributions. Tapez **next** pour afficher la carte du tour.",
+      );
       return;
     }
 

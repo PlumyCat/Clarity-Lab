@@ -1,5 +1,5 @@
 import PptxGenJS from 'pptxgenjs';
-import { BMAD_THEME, hex, addSlideHeader, addFooter } from '../theme';
+import { BMAD_THEME, hex, addSlideHeader, addFooter, stripMarkdown, truncateText } from '../theme';
 import { TechniqueResult, TechniqueId } from '../../storage/types';
 
 const TECHNIQUE_NAMES: Record<TechniqueId, string> = {
@@ -35,7 +35,7 @@ export function addTechniqueSummarySlides(
       color: hex(BMAD_THEME.colors.secondary),
       bold: true,
     });
-    slide.addText(result.summary || '\u2014', {
+    slide.addText(truncateText(stripMarkdown(result.summary || '\u2014'), 400), {
       x: 0.5,
       y: 1.55,
       w: 9.0,
@@ -44,6 +44,7 @@ export function addTechniqueSummarySlides(
       fontFace: BMAD_THEME.fonts.body,
       color: hex(BMAD_THEME.colors.text),
       valign: 'top',
+      autoFit: true,
     });
 
     // Key ideas section
@@ -58,9 +59,9 @@ export function addTechniqueSummarySlides(
       bold: true,
     });
 
-    const ideasToShow = result.ideas.slice(0, 8);
+    const ideasToShow = result.ideas.slice(0, 6);
     const ideaTexts: PptxGenJS.TextProps[] = ideasToShow.map((idea) => ({
-      text: idea,
+      text: truncateText(stripMarkdown(idea), 120),
       options: {
         fontSize: BMAD_THEME.sizes.body,
         bullet: true,
@@ -77,6 +78,7 @@ export function addTechniqueSummarySlides(
         fontFace: BMAD_THEME.fonts.body,
         color: hex(BMAD_THEME.colors.text),
         valign: 'top',
+        autoFit: true,
       });
     }
 

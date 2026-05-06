@@ -1,5 +1,5 @@
 import PptxGenJS from 'pptxgenjs';
-import { BMAD_THEME, hex, addSlideHeader, addFooter } from '../theme';
+import { BMAD_THEME, hex, addSlideHeader, addFooter, stripMarkdown, truncateText } from '../theme';
 import { Insight } from '../../storage/types';
 
 const IMPACT_BADGE: Record<string, string> = {
@@ -37,10 +37,10 @@ export function addInsightsSlide(
 
   // Insight cards (2 columns layout)
   const colWidth = 4.3;
-  const cardHeight = 1.6;
+  const cardHeight = 1.8;
   const startY = 1.2;
   const gapX = 0.4;
-  const gapY = 0.2;
+  const gapY = 0.15;
 
   sorted.slice(0, 4).forEach((insight, index) => {
     const col = index % 2;
@@ -58,29 +58,31 @@ export function addInsightsSlide(
       rectRadius: 0.05,
     });
 
-    // Insight title
-    slide.addText(insight.title, {
+    // Insight title (truncated to avoid overflow)
+    slide.addText(truncateText(stripMarkdown(insight.title), 60), {
       x: x + 0.15,
       y: y + 0.1,
       w: colWidth - 0.3,
-      h: 0.35,
+      h: 0.5,
       fontSize: BMAD_THEME.sizes.body,
       fontFace: BMAD_THEME.fonts.title,
       color: hex(BMAD_THEME.colors.primary),
       bold: true,
       valign: 'top',
+      autoFit: true,
     });
 
     // Insight description
-    slide.addText(insight.description, {
+    slide.addText(truncateText(stripMarkdown(insight.description), 130), {
       x: x + 0.15,
-      y: y + 0.45,
+      y: y + 0.6,
       w: colWidth - 0.3,
       h: 0.7,
       fontSize: BMAD_THEME.sizes.small,
       fontFace: BMAD_THEME.fonts.body,
       color: hex(BMAD_THEME.colors.text),
       valign: 'top',
+      autoFit: true,
     });
 
     // Impact badge

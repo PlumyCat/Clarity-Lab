@@ -3,7 +3,7 @@
 ## STORY-001 : Icone du bot dans la conversation Teams
 
 **Priorite** : Haute
-**Status** : TODO
+**Status** : DONE
 
 ### Description
 

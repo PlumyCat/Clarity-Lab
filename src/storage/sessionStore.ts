@@ -274,6 +274,7 @@ export class SessionStore {
       meetings: [],
       openQuestions: [],
       participants: [],
+      freeDiscussion: null,
       conversationReference: null,
     };
   }

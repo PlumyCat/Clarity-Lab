@@ -92,6 +92,14 @@ export interface MeetingRecord {
   stepsCompleted: BmadStep[];
 }
 
+// Discussion libre (live collection)
+export interface FreeDiscussion {
+  techniqueId: string;
+  round: number;
+  responses: ParticipantResponse[];
+  startedAt: Date;
+}
+
 // Session principale
 export interface BrainstormSession {
   id: string;
@@ -132,6 +140,9 @@ export interface BrainstormSession {
   meetings: MeetingRecord[];
   openQuestions: string[];
   participants: Participant[];
+
+  // Discussion libre active
+  freeDiscussion: FreeDiscussion | null;
 
   // Teams conversation reference (pour messages proactifs)
   conversationReference: Record<string, unknown> | null;

@@ -33,7 +33,7 @@ export function hex(color: string): string {
 
 export function applyTheme(pptx: PptxGenJS): void {
   pptx.layout = 'LAYOUT_WIDE';
-  pptx.author = 'BMAD Brainstorm Bot';
+  pptx.author = 'StormMate';
   pptx.theme = {
     headFontFace: BMAD_THEME.fonts.title,
     bodyFontFace: BMAD_THEME.fonts.body,
@@ -42,9 +42,9 @@ export function applyTheme(pptx: PptxGenJS): void {
 
 /** Add a standard footer to a slide */
 export function addFooter(slide: PptxGenJS.Slide, date: string): void {
-  slide.addText(`BMAD Brainstorm Bot – ${date}`, {
+  slide.addText(`StormMate – ${date}`, {
     x: 0.5,
-    y: 5.2,
+    y: 7.0,
     w: 9.0,
     h: 0.3,
     fontSize: 8,
@@ -52,6 +52,32 @@ export function addFooter(slide: PptxGenJS.Slide, date: string): void {
     color: hex(BMAD_THEME.colors.textLight),
     align: 'center',
   });
+}
+
+/**
+ * Strip markdown formatting from text for clean PPTX rendering.
+ * Removes headers, bold/italic markers, bullet prefixes, emojis, etc.
+ */
+export function stripMarkdown(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, '') // Remove markdown headers
+    .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold **text**
+    .replace(/\*(.+?)\*/g, '$1') // Remove italic *text*
+    .replace(/__(.+?)__/g, '$1') // Remove bold __text__
+    .replace(/_(.+?)_/g, '$1') // Remove italic _text_
+    .replace(/^[-*+]\s+/gm, '') // Remove list markers
+    .replace(/^\d+\.\s+/gm, '') // Remove numbered list markers
+    .replace(/`(.+?)`/g, '$1') // Remove inline code
+    .replace(/^>\s+/gm, '') // Remove blockquotes
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links, keep text
+    .replace(/\n{3,}/g, '\n\n') // Collapse multiple blank lines
+    .trim();
+}
+
+/** Truncate text to a max number of characters, adding ellipsis */
+export function truncateText(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return text.substring(0, maxChars - 3).replace(/\s+\S*$/, '') + '...';
 }
 
 /** Add a standard slide header (title + colored separator bar) */
